@@ -1,0 +1,11 @@
+# PostgreSQL
+POSTGRES_USER= # user connecting to DB
+POSTGRES_PASSWORD= # pw when connecting to db with above user
+POSTGRES_DB= # main instance that will be setup in the DB
+POSTGRES_CONTAINER_NAME= #THIS WILL DETERIMINE YOUR DB SETUP
+POSTGRES_PORT=5432
+
+# pgAdmin
+PGADMIN_DEFAULT_EMAIL= # email to log into the pgAdmin FE
+PGADMIN_DEFAULT_PASSWORD= # password for pgAdmin FE
+PGADMIN_PORT= # port that will serve pgAdmin - make sure this doesn't collide with other containers
