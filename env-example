@@ -3,7 +3,7 @@ POSTGRES_USER= # user connecting to DB
 POSTGRES_PASSWORD= # pw when connecting to db with above user
 POSTGRES_DB= # main instance that will be setup in the DB
 POSTGRES_CONTAINER_NAME= #THIS WILL DETERIMINE YOUR DB SETUP
-POSTGRES_PORT=5432
+POSTGRES_PORT=5432 # standard port, suggest keeping this as is unless you know what you are doing
 
 # pgAdmin
 PGADMIN_DEFAULT_EMAIL= # email to log into the pgAdmin FE
