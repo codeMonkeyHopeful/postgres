@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:15
-    container_name: postgres_api
+    container_name: ${POSTGRES_CONTAINER_NAME}
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
