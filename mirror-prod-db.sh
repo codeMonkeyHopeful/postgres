@@ -1,61 +1,57 @@
 #!/bin/bash
-# mirror-prod-db.sh
-
 set -e
-
 PROD_SERVER="neo@192.168.0.209"
 PROD_CONTAINER="postgres_api"
-LOCAL_VOLUME="postgres_data"
-LOCAL_CONTAINER="postgres_api"
+PROD_COMPOSE_DIR="/home/neo/repos/postgres"
 BACKUP_DIR="/home/neo/tmp"
+DATABASE_NAME="api_db"
+DATABASE_USER="neo"
 
-# Set up SSH connection sharing
 SSH_CONTROL_PATH="/tmp/ssh-control-%r@%h:%p"
 SSH_OPTS="-o ControlMaster=auto -o ControlPath=$SSH_CONTROL_PATH -o ControlPersist=10m"
 
-echo "Establishing SSH connection (enter password once)..."
+echo "Establishing SSH connection..."
 ssh $SSH_OPTS $PROD_SERVER "echo 'SSH connection established'"
 
-echo "Stopping local container..."
-docker stop $LOCAL_CONTAINER 2>/dev/null || true
-docker rm $LOCAL_CONTAINER 2>/dev/null || true
-
-echo "Creating backup directory on remote server..."
+echo "Creating backup directory..."
 ssh $SSH_OPTS $PROD_SERVER "mkdir -p $BACKUP_DIR"
 
-echo "Syncing production data..."
+echo "Creating database dump from production..."
 ssh $SSH_OPTS $PROD_SERVER "
-    docker run --rm \
-        --volumes-from $PROD_CONTAINER \
-        -v $BACKUP_DIR:/backup \
-        alpine sh -c 'tar czf /backup/postgres-backup.tar.gz -C /var/lib/postgresql/data . && chown \$(id -u):\$(id -g) /backup/postgres-backup.tar.gz'
+    docker exec $PROD_CONTAINER pg_dump -U $DATABASE_USER -d $DATABASE_NAME --clean --if-exists > $BACKUP_DIR/database-dump.sql
+    chown \$(id -u):\$(id -g) $BACKUP_DIR/database-dump.sql
+    echo 'Dump created, size:'
+    ls -lh $BACKUP_DIR/database-dump.sql
 "
 
-echo "Transferring backup..."
-scp $SSH_OPTS $PROD_SERVER:$BACKUP_DIR/postgres-backup.tar.gz /tmp/
+echo "Transferring database dump..."
+scp $SSH_OPTS $PROD_SERVER:$BACKUP_DIR/database-dump.sql /tmp/
 
-echo "Cleaning up remote backup..."
-ssh $SSH_OPTS $PROD_SERVER "rm -f $BACKUP_DIR/postgres-backup.tar.gz"
+echo "Stopping local services..."
+docker compose -f /home/neo/repos/postgres/docker-compose.yml down
 
-echo "Closing SSH connection..."
+echo "Starting local services..."
+docker compose -f /home/neo/repos/postgres/docker-compose.yml up -d
+
+echo "Waiting for local database to be ready..."
+sleep 15
+
+echo "Creating database if it doesn't exist..."
+docker exec postgres_api psql -U $DATABASE_USER -d postgres -c "CREATE DATABASE $DATABASE_NAME;" 2>/dev/null || echo "Database already exists or creation failed"
+
+echo "Restoring database..."
+docker exec -i postgres_api psql -U $DATABASE_USER -d $DATABASE_NAME < /tmp/database-dump.sql
+
+echo "Verifying restore..."
+echo "Tables in database:"
+docker exec postgres_api psql -U $DATABASE_USER -d $DATABASE_NAME -c '\dt'
+
+echo "Row count in users table:"
+docker exec postgres_api psql -U $DATABASE_USER -d $DATABASE_NAME -c 'SELECT count(*) FROM users;' || echo "Users table not found"
+
+# Cleanup
+rm -f /tmp/database-dump.sql
+ssh $SSH_OPTS $PROD_SERVER "rm -f $BACKUP_DIR/database-dump.sql"
 ssh $SSH_OPTS -O exit $PROD_SERVER 2>/dev/null || true
 
-echo "Restoring to local volume..."
-docker volume rm $LOCAL_VOLUME 2>/dev/null || true
-docker volume create $LOCAL_VOLUME
-
-docker run --rm \
-    -v $LOCAL_VOLUME:/data \
-    -v /tmp:/backup \
-    alpine tar xzf /backup/postgres-backup.tar.gz -C /data
-
-rm -f /tmp/postgres-backup.tar.gz
-
-echo "Starting local container..."
-docker run --name $LOCAL_CONTAINER \
-    -v $LOCAL_VOLUME:/var/lib/postgresql/data \
-    -p 5432:5432 \
-    -e POSTGRES_PASSWORD=yourpassword \
-    -d postgres
-
-echo "Database mirrored successfully!"
+echo "Database mirroring complete!"
