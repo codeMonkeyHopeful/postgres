@@ -75,7 +75,7 @@ def install_dependencies(venv_path):
         return False
 
     # List of dependencies to install
-    dependencies = ['simple_chalk']
+    dependencies = ['simple_chalk', 'python-dotenv']
 
     for dep in dependencies:
         print(f"📦 Installing {dep}...")
@@ -146,6 +146,46 @@ except ImportError as e:
         print(f"❌ simple_chalk not available in venv: {result.stdout}{result.stderr}")
         return None
 
+def import_dotenv_from_venv(venv_path):
+    """Import simple_chalk by running it through the venv's Python"""
+    env, python_exe, _ = create_venv_env(venv_path)
+
+    # Test if simple_chalk is available in the venv
+    test_import = """
+try:
+    from dotenv import load_dotenv
+    print("SUCCESS: load_dotenv imported")
+except ImportError as e:
+    print(f"ERROR: {e}")
+    exit(1)
+"""
+
+    result = subprocess.run([str(python_exe), '-c', test_import],
+                           capture_output=True, text=True, env=env)
+
+    if result.returncode == 0:
+        # If we can import it in the venv, we need to add the venv to sys.path
+        # to import it in the current process
+        venv_path = Path(venv_path)
+        if os.name == 'nt':
+            site_packages = venv_path / 'Lib' / 'site-packages'
+        else:
+            version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+            site_packages = venv_path / 'lib' / version / 'site-packages'
+
+        if site_packages.exists() and str(site_packages) not in sys.path:
+            sys.path.insert(0, str(site_packages))
+
+        try:
+            from dotenv import load_dotenv
+            return load_dotenv
+        except ImportError as e:
+            print(f"❌ Failed to import load_dotenv: {e}")
+            return None
+    else:
+        print(f"❌ load_dotenv not available in venv: {result.stdout}{result.stderr}")
+        return None
+
 
 def run_command_in_venv(command, venv_path):
     """Run any command in the virtual environment context"""
@@ -204,19 +244,58 @@ def create_env_file(env_content, success, alert, default, filename=".env", direc
             with open(env_file, 'w') as f:
                 f.write(env_content)
             print(success(f"✅ .env file created at {env_file}"))
-            return True
+            return True, env_file
 
         else:
             print(success("Will not overwrite, proceeding without creating .env file."))
-            return False
+            return False, env_file
     else:
         print(success(f"✅ .env file does not exist, creating at {env_file}"))
         with open(env_file, 'w') as f:
             f.write(env_content)
         print(success(f"✅ .env file created at {env_file}"))
-        return True
+        return True, env_file
 
 
+def load_env_vars(env_file='.env'):
+    """Load environment variables from .env file"""
+    try:
+        load_dotenv = import_dotenv_from_venv('venv')
+
+        if not Path(env_file).exists():
+            print(f"❌ .env file not found: {env_file}")
+            return None
+
+        # Load the .env file
+        load_dotenv(env_file)
+
+        # Extract the variables we need
+        env_vars = {
+            'POSTGRES_USER': os.getenv('POSTGRES_USER', 'admin'),
+            'POSTGRES_PASSWORD': os.getenv('POSTGRES_PASSWORD', 'password123'),
+            'POSTGRES_DB': os.getenv('POSTGRES_DB', 'api_db'),
+            'POSTGRES_CONTAINER_NAME': os.getenv('POSTGRES_CONTAINER_NAME', 'postgres_container'),
+            'POSTGRES_PORT': os.getenv('POSTGRES_PORT', '5432'),
+            'PGADMIN_DEFAULT_EMAIL': os.getenv('PGADMIN_DEFAULT_EMAIL', 'admin@example.com'),
+            'PGADMIN_DEFAULT_PASSWORD': os.getenv('PGADMIN_DEFAULT_PASSWORD', 'admin123'),
+            'PGADMIN_PORT': os.getenv('PGADMIN_PORT', '8080'),
+        }
+
+        return env_vars
+
+    except ImportError:
+        print("❌ python-dotenv not installed. Installing...")
+        # Use your existing venv installation function
+        env, python_exe, pip_exe = create_venv_env('venv')
+        result = subprocess.run([str(pip_exe), 'install', 'python-dotenv'],
+                               capture_output=True, text=True, env=env)
+        if result.returncode == 0:
+            print("✅ python-dotenv installed successfully!")
+            # Try again
+            return load_env_vars(env_file)
+        else:
+            print("❌ Failed to install python-dotenv, falling back to manual parsing")
+            return load_env_manual(env_file)
 
 def main():
     print("""Welcome to the Postgres DB interactive setup.
@@ -268,12 +347,46 @@ def main():
 
     try:
       # Create .env file
-      create_env_file(env_content, success, alert, default)
+      status, env_file = create_env_file(env_content, success, alert, default)
     except Exception as e:
       print(alert(f"❌ Error creating .env file: {e}"))
       sys.exit(1)
 
-  # setup_docker()
+    env_vars = load_env_vars(env_file)
+
+    if env_vars is None:
+        print(alert("❌ Failed to load environment variables from .env file."))
+        sys.exit(1)
+
+    print(success("✅ Environment variables loaded successfully!"))
+
+    print(info("Environment variables:"))
+    for key, value in env_vars.items():
+        print(f"{key}: {value}")
+
+    print(info("Starting Docker container..."))
+
+    docker_command_up = [
+        'docker', 'compose', 'up', '-d',
+        '--build'
+    ]
+    status = run_command_in_venv(docker_command_up, venv_path)
+
+    if status.returncode == 0:
+        print(success("✅ Docker container started successfully!"))
+    else:
+        print(alert(f"❌ Failed to start Docker container: {status.stderr}"))
+        sys.exit(1)
+
+
+    docker_command_ps = [
+        'docker', 'ps'
+    ]
+
+    print(info("Running Docker containers:"))
+    status = run_command_in_venv(docker_command_ps, venv_path)
+
+    print(success("Exiting setup script. You can now connect to your PostgreSQL database using the provided credentials."))
 
 
 if __name__ == "__main__":
