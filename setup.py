@@ -3,6 +3,8 @@ import subprocess
 import os
 import sys
 from pathlib import Path
+from simple_chalk import green, red, magenta, blue
+
 
 
 
@@ -70,31 +72,37 @@ def main():
 # PGADMIN_DEFAULT_PASSWORD=
 # PGADMIN_PORT=
 
-    print("""Welcome to the Postgres DB interactive setup.
+  # Setup chalk standardards
+  success=green.bold
+  fail=red.bold
+  info=blue.bold
+  default=magenta.bold
+
+  print(info("""Welcome to the Postgres DB interactive setup.
           Based on the inputs provided, this will create a .env file for your DB instance, start the Docker container, and display the running containers for reference.
           Please note you will need Python, Docker, and Docker Compose installed before running this file.
           For each input the default will be listed in parenthases, hitting enter without providing an input will use those inputs.
-          """)
+          """))
 
-    venv_name = input("Please enter existing venv you would like to use or if none exists the name you wish to give it (venv): ").strip() or "venv"
+  venv_name = input(f"Please enter existing venv you would like to use or if none exists the name you wish to give it {default("venv")}: ").strip() or "venv"
 
-    # Setup virtual environment
-    success, venv_path = setup_venv(venv_name)
+  # Setup virtual environment
+  successful, venv_path = setup_venv(venv_name)
 
-    if not success:
-        print("❌ Failed to setup virtual environment, please try running again or manually create.")
-        sys.exit(1)
+  if not successful:
+      print("❌ Failed to setup virtual environment, please try running again or manually create.")
+      sys.exit(1)
 
-    # Install dependencies
-    if not install_dependencies(venv_path):
-        print("❌ Failed to install dependencies")
-        return
+  # Install dependencies
+  if not install_dependencies(venv_path):
+      print("❌ Failed to install dependencies")
+      return
 
-    print("✅ Python environment setup complete!")
+  print("✅ Python environment setup complete!")
 
-    # Continue with your PostgreSQL setup...
-    # create_env_file()
-    # setup_docker()
+  # Continue with your PostgreSQL setup...
+  # create_env_file()
+  # setup_docker()
 
 if __name__ == "__main__":
     main()
