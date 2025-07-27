@@ -33,6 +33,63 @@ def setup_venv(venv_name="venv"):
         print(f"❌ Error creating venv: {e}")
         return False, None
 
+
+def activate_venv(venv_path):
+    """Activate virtual environment by modifying Python environment for current OS"""
+    venv_path = Path(venv_path)
+
+    # Check if venv exists and is valid
+    if not venv_path.exists() or not (venv_path / 'pyvenv.cfg').exists():
+        print(f"❌ Virtual environment not found or invalid: {venv_path}")
+        return False
+
+    # Get OS-specific paths
+    if os.name == 'nt':  # Windows
+        python_exe = venv_path / 'Scripts' / 'python.exe'
+        scripts_dir = venv_path / 'Scripts'
+        site_packages = venv_path / 'Lib' / 'site-packages'
+    else:  # Unix/Linux/Mac
+        python_exe = venv_path / 'bin' / 'python'
+        scripts_dir = venv_path / 'bin'
+        # Get Python version for site-packages path
+        version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+        site_packages = venv_path / 'lib' / version / 'site-packages'
+
+    # Verify critical files exist
+    if not python_exe.exists():
+        print(f"❌ Python executable not found in venv: {python_exe}")
+        return False
+
+    if not site_packages.exists():
+        print(f"❌ Site-packages directory not found: {site_packages}")
+        return False
+
+    # Modify Python path to prioritize venv packages
+    site_packages_str = str(site_packages)
+    if site_packages_str not in sys.path:
+        sys.path.insert(0, site_packages_str)
+
+    # Update environment variables
+    os.environ['VIRTUAL_ENV'] = str(venv_path)
+
+    # Update PATH to prioritize venv executables
+    current_path = os.environ.get('PATH', '')
+    scripts_dir_str = str(scripts_dir)
+    if scripts_dir_str not in current_path:
+        os.environ['PATH'] = f"{scripts_dir_str}{os.pathsep}{current_path}"
+
+    # Update sys.executable to point to venv python
+    sys.executable = str(python_exe)
+
+    # Remove PYTHONHOME if set (can interfere with venv)
+    if 'PYTHONHOME' in os.environ:
+        del os.environ['PYTHONHOME']
+
+    print(f"✅ Virtual environment activated: {venv_path}")
+    return True
+
+
+
 def install_dependencies(venv_path):
     """Install required dependencies in created venv"""
     if os.name == 'nt':  # Windows
@@ -95,6 +152,12 @@ def main():
 
   if not successful:
       print("❌ Failed to setup virtual environment, please try running again or manually create.")
+      sys.exit(1)
+
+  activated = activate_venv(venv_path)
+
+  if not activated:
+      print("❌ Failed to activate virtual environment, please try running again or manually activate.")
       sys.exit(1)
 
   # Install dependencies
