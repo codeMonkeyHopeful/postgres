@@ -112,13 +112,13 @@ def import_chalk_from_venv(venv_path):
 
     # Test if simple_chalk is available in the venv
     test_import = """
-      try:
-          from simple_chalk import chalk
-          print("SUCCESS: simple_chalk imported")
-      except ImportError as e:
-          print(f"ERROR: {e}")
-          exit(1)
-      """
+try:
+    from simple_chalk import chalk
+    print("SUCCESS: simple_chalk imported")
+except ImportError as e:
+    print(f"ERROR: {e}")
+    exit(1)
+"""
 
     result = subprocess.run([str(python_exe), '-c', test_import],
                            capture_output=True, text=True, env=env)
@@ -170,49 +170,51 @@ def prep_env_file_inputs(info, default):
     PGADMIN_DEFAULT_EMAIL=input(f"What email would you like to use for pgAdmin? {default("example@email.com")} : ").strip() or "example@email.com"
     PGADMIN_DEFAULT_PASSWORD=input(f"What password would you like to use for pgAdmin? {default("admin123")} : ").strip() or "admin123"
     PGADMIN_PORT=input(f"What port would you like to use for pgAdmin? {default("8080")} : ").strip() or "8080"
+
     return f"""# PostgreSQL
-        POSTGRES_USER={POSTGRES_USER}
-        POSTGRES_PASSWORD={POSTGRES_PASSWORD}
-        POSTGRES_DB={POSTGRES_DB}
-        POSTGRES_CONTAINER_NAME={POSTGRES_CONTAINER_NAME}
-        POSTGRES_PORT={POSTGRES_PORT}
-        # pgAdmin
-        PGADMIN_DEFAULT_EMAIL={PGADMIN_DEFAULT_EMAIL}
-        PGADMIN_DEFAULT_PASSWORD={PGADMIN_DEFAULT_PASSWORD}
-        PGADMIN_PORT={PGADMIN_PORT}
-        """
+POSTGRES_USER={POSTGRES_USER}
+POSTGRES_PASSWORD={POSTGRES_PASSWORD}
+POSTGRES_DB={POSTGRES_DB}
+POSTGRES_CONTAINER_NAME={POSTGRES_CONTAINER_NAME}
+POSTGRES_PORT={POSTGRES_PORT}
+
+# pgAdmin
+PGADMIN_DEFAULT_EMAIL={PGADMIN_DEFAULT_EMAIL}
+PGADMIN_DEFAULT_PASSWORD={PGADMIN_DEFAULT_PASSWORD}
+PGADMIN_PORT={PGADMIN_PORT}
+"""
 
 
 
 def create_env_file(env_content, success, alert, default, filename=".env", directory=None ):
-  """Check if .env file exists in specified directory"""
-  if directory is None:
-      directory = Path.cwd()  # Current working directory
-  else:
-      directory = Path(directory)
+    """Check if .env file exists in specified directory"""
+    if directory is None:
+        directory = Path.cwd()  # Current working directory
+    else:
+        directory = Path(directory)
 
-  env_file = directory / filename
-  if env_file.exists():
-      print(alert(f"❗ .env file already exists at {env_file}, skipping creation."))
+    env_file = directory / filename
+    if env_file.exists():
+        print(alert(f"❗ .env file already exists at {env_file}, skipping creation."))
 
-      overwrite = input(alert(f"Do you want to overwrite the existing .env file (y/n)? {default('n')}")).strip().lower() or 'n'
+        overwrite = input(alert(f"Do you want to overwrite the existing .env file (y/n)? {default('n')}")).strip().lower() or 'n'
 
-      if overwrite in ['y', 'yes', 'yeah', 'yep', 'true', '1']:
-          print(alert("Will overwrite"))
-          with open(env_file, 'w') as f:
-              f.write(env_content)
-          print(success(f"✅ .env file created at {env_file}"))
-          return True
+        if overwrite in ['y', 'yes', 'yeah', 'yep', 'true', '1']:
+            print(alert("Will overwrite"))
+            with open(env_file, 'w') as f:
+                f.write(env_content)
+            print(success(f"✅ .env file created at {env_file}"))
+            return True
 
-      else:
-          print(success("Will not overwrite, proceeding without creating .env file."))
-          return False
-  else:
-      print(success(f"✅ .env file does not exist, creating at {env_file}"))
-      with open(env_file, 'w') as f:
-          f.write(env_content)
-      print(success(f"✅ .env file created at {env_file}"))
-      return True
+        else:
+            print(success("Will not overwrite, proceeding without creating .env file."))
+            return False
+    else:
+        print(success(f"✅ .env file does not exist, creating at {env_file}"))
+        with open(env_file, 'w') as f:
+            f.write(env_content)
+        print(success(f"✅ .env file created at {env_file}"))
+        return True
 
 
 
@@ -248,10 +250,14 @@ def main():
         alert = chalk.red.bold
         info = chalk.blue.bold
         default = chalk.magenta.bold
-
         print(success("✅ Chalk imported successfully!"))
     else:
-        print(alert("❌ Could not import chalk, continuing without colored output..."))
+        print("❌ Could not import chalk, continuing without colored output...")
+        # Fallback functions for when chalk is not available
+        success = lambda x: f"✅ {x}"
+        alert = lambda x: f"⚠️  {x}"
+        info = lambda x: f"ℹ️  {x}"
+        default = lambda x: f"({x})"
 
     # Prepare environment file inputs
     env_content = prep_env_file_inputs(info, default)
@@ -261,13 +267,13 @@ def main():
     print(env_content)
 
     try:
-        # Create .env file
-        create_env_file(env_content, success, alert, default)
+      # Create .env file
+      create_env_file(env_content, success, alert, default)
     except Exception as e:
-        print(alert(f"❌ Error creating .env file: {e}"))
-        sys.exit(1)
+      print(alert(f"❌ Error creating .env file: {e}"))
+      sys.exit(1)
 
-    # setup_docker()
+  # setup_docker()
 
 
 if __name__ == "__main__":
