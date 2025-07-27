@@ -3,7 +3,7 @@ import subprocess
 import os
 import sys
 from pathlib import Path
-from simple_chalk import green, red, magenta, blue
+
 
 
 
@@ -56,6 +56,14 @@ def install_dependencies(venv_path):
 
     return True
 
+def import_chalk():
+    try:
+        from simple_chalk import chalk
+        return chalk
+    except ImportError as e:
+        print(f"❌ Failed to import simple_chalk: {e}")
+        print("💡 Make sure the virtual environment is activated and simple_chalk is installed")
+        return None
 
 def main():
 
@@ -72,19 +80,15 @@ def main():
 # PGADMIN_DEFAULT_PASSWORD=
 # PGADMIN_PORT=
 
-  # Setup chalk standardards
-  success=green.bold
-  fail=red.bold
-  info=blue.bold
-  default=magenta.bold
 
-  print(info("""Welcome to the Postgres DB interactive setup.
+
+  print("""Welcome to the Postgres DB interactive setup.
           Based on the inputs provided, this will create a .env file for your DB instance, start the Docker container, and display the running containers for reference.
           Please note you will need Python, Docker, and Docker Compose installed before running this file.
           For each input the default will be listed in parenthases, hitting enter without providing an input will use those inputs.
-          """))
+          """)
 
-  venv_name = input(f"Please enter existing venv you would like to use or if none exists the name you wish to give it {default("venv")}: ").strip() or "venv"
+  venv_name = input(f"Please enter existing venv you would like to use or if none exists the name you wish to give it (venv): ").strip() or "venv"
 
   # Setup virtual environment
   successful, venv_path = setup_venv(venv_name)
@@ -99,6 +103,14 @@ def main():
       return
 
   print("✅ Python environment setup complete!")
+
+  chalk=import_chalk()
+
+    # Setup chalk standardards
+  success=chalk.green.bold
+  fail=chalk.red.bold
+  info=chalk.blue.bold
+  default=chalk.magenta.bold
 
   # Continue with your PostgreSQL setup...
   # create_env_file()
