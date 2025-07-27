@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-PROD_SERVER="neo@192.168.0.209"  
+PROD_SERVER="neo@192.168.0.209"
 PROD_CONTAINER="postgres_api"
 PROD_COMPOSE_DIR="/home/neo/repos/postgres"
 BACKUP_DIR="/home/neo/tmp"
@@ -28,10 +28,10 @@ echo "Transferring database dump..."
 scp $SSH_OPTS $PROD_SERVER:$BACKUP_DIR/database-dump.sql /tmp/
 
 echo "Stopping local services..."
-docker compose -f /home/neo/repos/postgres-api/docker-compose.yml down
+docker compose -f /home/neo/repos/postgres/docker-compose.yml down
 
 echo "Starting local services..."
-docker compose -f /home/neo/repos/postgres-api/docker-compose.yml up -d
+docker compose -f /home/neo/repos/postgres/docker-compose.yml up -d
 
 echo "Waiting for local database to be ready..."
 sleep 15
