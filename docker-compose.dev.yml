@@ -34,7 +34,7 @@ services:
       - PGADMIN_CONFIG_SERVER_MODE=False
       - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
     ports:
-      - ${PGADMIN_PORT:-8080}:80
+      - 4243:80
     depends_on:
       postgres_dev:
         condition: service_healthy
