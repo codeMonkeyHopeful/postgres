@@ -201,16 +201,40 @@ def run_command_in_venv(command, venv_path):
     return result
 
 
-def prep_env_file_inputs(info, default):
+def prep_env_file_inputs(info, default, alert):
     POSTGRES_USER=input(f"Please enter the username you would like to use when connecting to the DB {default("admin")} : ").strip() or "admin"
     POSTGRES_PASSWORD=input(f"Please enter the password for user {info(POSTGRES_USER)} when connecting to the DB {default("password123")} : ").strip() or "password123"
     POSTGRES_DB=input(f"What would you like to name your DB? {default("api_db")} : ").strip() or "api_db"
     POSTGRES_CONTAINER_NAME=input(f"What do you want to name your Docker container?  This will also be used in your DB. {default("postgres_container")} : ").strip() or "postgres_container"
     POSTGRES_PORT=input(f"What port would you like to use for your DB? {default("5432")} : ").strip() or "5432"
+    print(info("""
+
+Great! Now let's setup pgAdmin, which is a web-based GUI for managing your PostgreSQL databases.
+You can access it via a web browser at http://localhost:8080 by default.
+
+          """))
+
     PGADMIN_DEFAULT_EMAIL=input(f"What email would you like to use for pgAdmin? {default("example@email.com")} : ").strip() or "example@email.com"
     PGADMIN_DEFAULT_PASSWORD=input(f"What password would you like to use for pgAdmin? {default("admin123")} : ").strip() or "admin123"
     PGADMIN_PORT=input(f"What port would you like to use for pgAdmin? {default("8080")} : ").strip() or "8080"
     PGADMIN_CONTAINER_NAME=input(f"What do you want to name your pgAdmin Docker container? {default("pgadmin")} : ").strip() or "pgadmin"
+
+    print(info("""
+Now let's setup the Mirror-Prod-DB settings. This will allow you clone your production database to your local machine.
+You will need to have SSH access to the production server and the PostgreSQL server running on it.
+          """))
+
+    BACKUP_DIR=input(f"What directory would you like to use for backups? {default(f"/home/{POSTGRES_USER}/tmp")} : ").strip() or f"/home/{POSTGRES_USER}/tmp"
+    SERVER_CONNECTION=input(f"What is the SSH connection string for your production server? ex. user@192.168.0.28 {default("user@host_ip")} : ").strip() or "user@host"
+    SERVER_CONTAINER_NAME=input(f"What is the name of the PostgreSQL container on your production server you are trying to clone? {default("postgres")} : ").strip() or "postgres"
+    DB_STARTUP_WAIT=input(f"How long would you like to wait for the DB to start up before trying to connect? We need to wait a short time for the db to spin up, I suggest 15 seconds. {default("15")} : ").strip() or "15"
+    print(info("""
+
+Great! Thtat's all the inputs we need to create your .env file.
+You can always edit this file later to change the settings.
+
+          """))
+    print(alert("ALWAYS MAKE SURE TO KEEP YOUR .env FILE PRIVATE! NEVER SHARE IT PUBLICLY OR COMMIT IT TO A PUBLIC REPOSITORY!"))
 
     return f"""# PostgreSQL
 POSTGRES_USER={POSTGRES_USER}
@@ -224,6 +248,12 @@ PGADMIN_DEFAULT_EMAIL={PGADMIN_DEFAULT_EMAIL}
 PGADMIN_DEFAULT_PASSWORD={PGADMIN_DEFAULT_PASSWORD}
 PGADMIN_PORT={PGADMIN_PORT}
 PGADMIN_CONTAINER_NAME={PGADMIN_CONTAINER_NAME}
+
+# Mirror-Prod-DB Settings
+BACKUP_DIR={BACKUP_DIR}
+SERVER_CONNECTION={SERVER_CONNECTION}
+SERVER_CONTAINER_NAME={SERVER_CONTAINER_NAME}
+DB_STARTUP_WAIT={DB_STARTUP_WAIT}
 """
 
 
@@ -341,7 +371,7 @@ def main():
         default = lambda x: f"({x})"
 
     # Prepare environment file inputs
-    env_content = prep_env_file_inputs(info, default)
+    env_content = prep_env_file_inputs(info, default, alert)
 
 
     print(info("Preparing .env file with the following inputs:"))
