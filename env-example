@@ -9,3 +9,10 @@ POSTGRES_PORT=5432 # standard port, suggest keeping this as is unless you know w
 PGADMIN_DEFAULT_EMAIL= # email to log into the pgAdmin FE
 PGADMIN_DEFAULT_PASSWORD= # password for pgAdmin FE
 PGADMIN_PORT= # port that will serve pgAdmin - make sure this doesn't collide with other containers
+PGADMIN_CONTAINER_NAME= # Docker container name for you pgAdmin instance
+
+# Mirror-Prod-DB Settings
+BACKUP_DIR= # directory to store backups while cloning production DB.  Suggest using a tmp directory in your home folder ex. /home/YOUR_USERNAME/tmp
+SERVER_CONNECTION= # SSH connection string for your production server, ex. user@server_ip
+SERVER_CONTAINER_NAME= # name of the PostgreSQL container on your production server you are trying to clone, ex. postgres
+DB_STARTUP_WAIT= # how long to wait for the DB to start up before trying to connect, suggest 15 seconds
