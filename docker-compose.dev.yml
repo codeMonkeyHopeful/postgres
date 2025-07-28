@@ -1,7 +1,7 @@
 services:
   postgres_dev:
     image: postgres:15
-    container_name: ${POSTGRES_CONTAINER_NAME}
+    container_name: ${POSTGRES_CONTAINER_NAME}_dev
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -12,7 +12,7 @@ services:
     ports:
       - '${POSTGRES_PORT}:5432'
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_dev:/var/lib/postgresql/data
     networks:
       - pgnet
     healthcheck:
@@ -23,7 +23,7 @@ services:
 
   pgadmin_dev:
     image: dpage/pgadmin4
-    container_name: pgadmin
+    container_name: ${PGADMIN_CONTAINER_NAME}_dev
     restart: unless-stopped
     user: root
     environment:
@@ -39,14 +39,14 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - pgadmin_data_dev:/var/lib/pgadmin
       - /tmp:/tmp
     networks:
       - pgnet
 
 volumes:
-  postgres_data:
-  pgadmin_data:
+  postgres_data_dev:
+  pgadmin_data_dev:
 
 networks:
   pgnet:
