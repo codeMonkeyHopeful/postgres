@@ -41,16 +41,40 @@ fi
 echo "Local dump size: $(ls -lh /tmp/database-dump.sql)"
 
 echo "Stopping local services..."
-docker compose -f /home/neo/repos/postgres/docker-compose.yml down
+docker compose -f /home/neo/repos/$POSTGRES_CONTAINER_NAME/docker-compose.yml down
+
+echo "Removing old database volume for clean initialization..."
+docker volume rm postgres_postgres_data 2>/dev/null || echo "Volume didn't exist or already removed"
 
 echo "Starting local services..."
-docker compose -f /home/neo/repos/postgres/docker-compose.yml up -d
+docker compose -f /home/neo/repos/$POSTGRES_CONTAINER_NAME/docker-compose.yml up -d
 
-echo "Waiting for local database to be ready trying again in $DB_STARTUP_WAIT seconds..."
+echo "Waiting for local database to be ready trying in $DB_STARTUP_WAIT seconds..."
 sleep $DB_STARTUP_WAIT
 
-echo "Creating database if it doesn't exist..."
-docker exec $POSTGRES_CONTAINER_NAME psql -U $POSTGRES_USER -d postgres -c "SELECT 1 FROM pg_database WHERE datname='$POSTGRES_DB'" | grep -q 1 || \
+echo "Waiting for PostgreSQL to be ready..."
+for i in {1..20}; do
+    if docker exec $POSTGRES_CONTAINER_NAME pg_isready -U $POSTGRES_USER >/dev/null 2>&1; then
+        echo "PostgreSQL service ready after $i attempts"
+        break
+    fi
+    echo "Attempt $i: Waiting for PostgreSQL service..."
+    sleep 2
+done
+
+echo "Testing database connection with user $POSTGRES_USER..."
+# Wait for the user and database to be ready
+for i in {1..10}; do
+    if docker exec $POSTGRES_CONTAINER_NAME psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT 1;" >/dev/null 2>&1; then
+        echo "Database connection successful!"
+        break
+    fi
+    echo "Attempt $i: Waiting for database initialization..."
+    sleep 3
+done
+
+echo "Recreating database..."
+docker exec $POSTGRES_CONTAINER_NAME psql -U $POSTGRES_USER -d postgres -c "DROP DATABASE IF EXISTS $POSTGRES_DB;"
 docker exec $POSTGRES_CONTAINER_NAME psql -U $POSTGRES_USER -d postgres -c "CREATE DATABASE $POSTGRES_DB;"
 
 echo "Restoring database..."
