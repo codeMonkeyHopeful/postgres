@@ -210,6 +210,7 @@ def prep_env_file_inputs(info, default):
     PGADMIN_DEFAULT_EMAIL=input(f"What email would you like to use for pgAdmin? {default("example@email.com")} : ").strip() or "example@email.com"
     PGADMIN_DEFAULT_PASSWORD=input(f"What password would you like to use for pgAdmin? {default("admin123")} : ").strip() or "admin123"
     PGADMIN_PORT=input(f"What port would you like to use for pgAdmin? {default("8080")} : ").strip() or "8080"
+    PGADMIN_CONTAINER_NAME=input(f"What do you want to name your pgAdmin Docker container? {default("pgadmin")} : ").strip() or "pgadmin"
 
     return f"""# PostgreSQL
 POSTGRES_USER={POSTGRES_USER}
@@ -222,6 +223,7 @@ POSTGRES_PORT={POSTGRES_PORT}
 PGADMIN_DEFAULT_EMAIL={PGADMIN_DEFAULT_EMAIL}
 PGADMIN_DEFAULT_PASSWORD={PGADMIN_DEFAULT_PASSWORD}
 PGADMIN_PORT={PGADMIN_PORT}
+PGADMIN_CONTAINER_NAME={PGADMIN_CONTAINER_NAME}
 """
 
 
