@@ -40,12 +40,15 @@ fi
 
 echo "Local dump size: $(ls -lh /tmp/database-dump.sql)"
 
+# TODO: Either have a user input for container location OR add to README that this must be run from the directory where the docker-compose.yml file is located and update ths line below
 echo "Stopping local services..."
 docker compose -f /home/neo/repos/$POSTGRES_CONTAINER_NAME/docker-compose.yml down
 
+# TODO: Either have a user input for volume name OR figure out how to inspect and get the volume and update ths line below
 echo "Removing old database volume for clean initialization..."
 docker volume rm postgres_postgres_data 2>/dev/null || echo "Volume didn't exist or already removed"
 
+# TODO: Either have a user input for container location OR add to README that this must be run from the directory where the docker-compose.yml file is located and update ths line below
 echo "Starting local services..."
 docker compose -f /home/neo/repos/$POSTGRES_CONTAINER_NAME/docker-compose.yml up -d
 
@@ -85,12 +88,18 @@ else
     exit 1
 fi
 
+
+# TODO: Decide if we want to keep this verification step or not
+# TODO It can be useful for debugging but users may not be in the DB and this will fail
 echo "Verifying restore..."
 echo "Tables in database:"
 docker exec $POSTGRES_CONTAINER_NAME psql -U $POSTGRES_USER -d $POSTGRES_DB -c '\dt'
 
 echo "Row count in users table:"
 docker exec $POSTGRES_CONTAINER_NAME psql -U $POSTGRES_USER -d $POSTGRES_DB -c 'SELECT count(*) FROM users;' || echo "Users table not found"
+# TODO: Decide if we want to keep this verification step or not
+# TODO It can be useful for debugging but users may not be in the DB and this will fail
+
 
 # Cleanup
 echo "Cleaning up temporary files..."
